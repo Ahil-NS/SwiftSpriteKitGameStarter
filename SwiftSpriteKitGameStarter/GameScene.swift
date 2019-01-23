@@ -9,21 +9,43 @@
 import SpriteKit
 import GameplayKit
 
-class GameScene: SKScene {
+class GameScene: SKScene, SKPhysicsContactDelegate {
     
-    private var label : SKLabelNode?
+    private var scoreLabel : SKLabelNode?
     private var playerA : SKSpriteNode?
+    private var ground : SKSpriteNode?
+    private var ceil : SKSpriteNode?
     
     private var heartTimer : Timer?
     
+    let playerCategory : UInt32 = 0x1 << 1
+    let heartCategory : UInt32 = 0x1 << 2
+    
+    let groundAndCeilCategory : UInt32 = 0x1 << 4
+    
+    private var score = 0
+    
     override func didMove(to view: SKView) {
         
-        self.label = self.childNode(withName: "//helloLabel") as? SKLabelNode
-        if let label = self.label {
+        //called when physics bodies come in contact with each other.
+        physicsWorld.contactDelegate = self
+        
+        self.scoreLabel = self.childNode(withName: "//scoreLabel") as? SKLabelNode
+        if let label = self.scoreLabel {
             label.alpha = 0.0
             label.run(SKAction.fadeIn(withDuration: 2.0))
         }
         self.playerA = self.childNode(withName: "playerA") as? SKSpriteNode
+        playerA?.physicsBody?.categoryBitMask = playerCategory
+        playerA?.physicsBody?.contactTestBitMask = heartCategory
+        playerA?.physicsBody?.collisionBitMask = groundAndCeilCategory
+        
+        ground = childNode(withName: "ground") as? SKSpriteNode
+        ground?.physicsBody?.categoryBitMask = groundAndCeilCategory
+        ground?.physicsBody?.collisionBitMask = playerCategory
+        
+        ceil = childNode(withName: "ceil") as? SKSpriteNode
+        ceil?.physicsBody?.categoryBitMask = groundAndCeilCategory
         
         heartTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true, block: { (timer) in
             self.createHeart()
@@ -32,10 +54,10 @@ class GameScene: SKScene {
     
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        if let label = self.label {
+        if let label = self.scoreLabel {
             label.run(SKAction.init(named: "Pulse")!, withKey: "fadeInOut")
         }
-        
+        //Applies a force to the center of gravity of a physics body.
         playerA?.physicsBody?.applyForce(CGVector(dx: 0, dy: 100_000))
         
         
@@ -43,6 +65,15 @@ class GameScene: SKScene {
     
     func createHeart(){
         let heart = SKSpriteNode(imageNamed: "love")
+        //Create heart physic body
+        heart.physicsBody = SKPhysicsBody(rectangleOf: heart.size)
+        
+        heart.physicsBody?.affectedByGravity = false
+        
+        heart.physicsBody?.categoryBitMask = heartCategory
+        heart.physicsBody?.contactTestBitMask = playerCategory
+        //Stop heart colliding with anything
+        heart.physicsBody?.collisionBitMask = 0
         addChild(heart)
         
         let maxY = size.width/2 - heart.size.width/2
@@ -55,6 +86,19 @@ class GameScene: SKScene {
         let actions = SKAction.sequence([moveLeft,SKAction.removeFromParent()])
         
         heart.run(actions)
+    }
+    
+    func didBegin(_ contact: SKPhysicsContact) {
+        score += 1
+        scoreLabel?.text = "Score: \(score)"
+        
+        if contact.bodyA.categoryBitMask == heartCategory{
+            contact.bodyA.node?.removeFromParent()
+        }
+        if contact.bodyB.categoryBitMask == heartCategory{
+            contact.bodyB.node?.removeFromParent()
+        }
+        
     }
     
 }
