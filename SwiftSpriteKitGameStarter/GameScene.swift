@@ -12,14 +12,19 @@ import GameplayKit
 class GameScene: SKScene, SKPhysicsContactDelegate {
     
     private var scoreLabel : SKLabelNode?
+    private var yourScoreLabel : SKLabelNode?
+    private var finalScoreLabel : SKLabelNode?
     private var playerA : SKSpriteNode?
     private var ground : SKSpriteNode?
     private var ceil : SKSpriteNode?
     
     private var heartTimer : Timer?
+    private var brokenHeartTimer : Timer?
+    
     
     let playerCategory : UInt32 = 0x1 << 1
     let heartCategory : UInt32 = 0x1 << 2
+    let brokenHeartCategory : UInt32 = 0x1 << 3
     
     let groundAndCeilCategory : UInt32 = 0x1 << 4
     
@@ -47,8 +52,18 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         ceil = childNode(withName: "ceil") as? SKSpriteNode
         ceil?.physicsBody?.categoryBitMask = groundAndCeilCategory
         
+        startTimers()
+       
+        
+    }
+    
+    func startTimers(){
         heartTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true, block: { (timer) in
             self.createHeart()
+        })
+        
+        brokenHeartTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true, block: { (timer) in
+            self.createBrokenHeart()
         })
     }
     
@@ -58,9 +73,28 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             label.run(SKAction.init(named: "Pulse")!, withKey: "fadeInOut")
         }
         //Applies a force to the center of gravity of a physics body.
-        playerA?.physicsBody?.applyForce(CGVector(dx: 0, dy: 100_000))
+        if(scene?.isPaused == false){
+            playerA?.physicsBody?.applyForce(CGVector(dx: 0, dy: 100_000))
+        }
         
         
+        let touch = touches.first
+        if let location = touch?.location(in: self){
+            let theNodes = nodes(at: location)
+            
+            for node in theNodes{
+                if node.name == "play" {
+                    print("play pressed")
+                    score = 0
+                    node.removeFromParent()
+                    finalScoreLabel?.removeFromParent()
+                    yourScoreLabel?.removeFromParent()
+                    scene?.isPaused = false
+                    scoreLabel?.text = "Score: \(score)"
+                    startTimers()
+                }
+            }
+        }
     }
     
     func createHeart(){
@@ -88,16 +122,89 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         heart.run(actions)
     }
     
+    func createBrokenHeart(){
+        let brokenHeart = SKSpriteNode(imageNamed: "broken")
+        //Create heart physic body
+        brokenHeart.physicsBody = SKPhysicsBody(rectangleOf: brokenHeart.size)
+        
+        brokenHeart.physicsBody?.affectedByGravity = false
+        
+        brokenHeart.physicsBody?.categoryBitMask = brokenHeartCategory
+        brokenHeart.physicsBody?.contactTestBitMask = playerCategory
+        //Stop heart colliding with anything
+        brokenHeart.physicsBody?.collisionBitMask = 0
+        addChild(brokenHeart)
+        
+        let maxY = size.width/2 - brokenHeart.size.width/2
+        let minY = -size.width/2 + brokenHeart.size.width/2
+        let range = maxY - minY
+        let rand = arc4random_uniform(UInt32(range))
+        let brokenHeartY = maxY - CGFloat(rand)
+        brokenHeart.position = CGPoint(x: self.size.width/2 + brokenHeart.size.width/2, y: brokenHeartY)
+        let moveLeft = SKAction.moveBy(x: -size.width - brokenHeart.size.width, y: 0, duration: 2)
+        let actions = SKAction.sequence([moveLeft,SKAction.removeFromParent()])
+        
+        brokenHeart.run(actions)
+    }
+    
+    
     func didBegin(_ contact: SKPhysicsContact) {
-        score += 1
-        scoreLabel?.text = "Score: \(score)"
+        
         
         if contact.bodyA.categoryBitMask == heartCategory{
+            score += 1
+            scoreLabel?.text = "Score: \(score)"
             contact.bodyA.node?.removeFromParent()
         }
+        
         if contact.bodyB.categoryBitMask == heartCategory{
+            score += 1
+            scoreLabel?.text = "Score: \(score)"
             contact.bodyB.node?.removeFromParent()
         }
+        
+        if contact.bodyA.categoryBitMask == brokenHeartCategory{
+            contact.bodyA.node?.removeFromParent()
+            gameOver()
+        }
+        
+        if contact.bodyB.categoryBitMask == brokenHeartCategory{
+            contact.bodyB.node?.removeFromParent()
+            gameOver()
+        }
+        
+        
+    }
+    
+    func gameOver(){
+        scene?.isPaused = true
+        
+        heartTimer?.invalidate()
+        brokenHeartTimer?.invalidate()
+        
+        yourScoreLabel = SKLabelNode(text: "Your Score: ")
+        yourScoreLabel?.position = CGPoint(x: 0, y: 200)
+        yourScoreLabel?.fontSize = 100
+        yourScoreLabel?.zPosition = 1
+        if(yourScoreLabel != nil){
+            addChild(yourScoreLabel!)
+        }
+        
+        
+        finalScoreLabel = SKLabelNode(text: "\(score)")
+        finalScoreLabel?.position = CGPoint(x: 0, y: 0)
+        finalScoreLabel?.fontSize = 200
+        finalScoreLabel?.zPosition = 1
+        if(finalScoreLabel != nil){
+            addChild(finalScoreLabel!)
+        }
+       
+        
+        let playButton = SKSpriteNode(imageNamed: "play")
+        playButton.position = CGPoint(x: 0, y: -200)
+        playButton.name = "play"
+        playButton.zPosition = 1
+        addChild(playButton)
         
     }
     
