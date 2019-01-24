@@ -45,6 +45,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         playerA?.physicsBody?.contactTestBitMask = heartCategory
         playerA?.physicsBody?.collisionBitMask = groundAndCeilCategory
         
+        var playerRun : [SKTexture] = []
+        for num in 0...14 {
+            print("running_\(num)")
+            playerRun.append(SKTexture(imageNamed: "running_\(num)"))
+        }
+        playerA?.run(SKAction.repeatForever(SKAction.animate(with: playerRun, timePerFrame: 0.05)))
+        
         ground = childNode(withName: "ground") as? SKSpriteNode
         ground?.physicsBody?.categoryBitMask = groundAndCeilCategory
         ground?.physicsBody?.collisionBitMask = playerCategory
@@ -53,7 +60,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         ceil?.physicsBody?.categoryBitMask = groundAndCeilCategory
         
         startTimers()
-       
+        
         
     }
     
@@ -84,7 +91,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             
             for node in theNodes{
                 if node.name == "play" {
-                    print("play pressed")
                     score = 0
                     node.removeFromParent()
                     finalScoreLabel?.removeFromParent()
@@ -198,7 +204,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         if(finalScoreLabel != nil){
             addChild(finalScoreLabel!)
         }
-       
+        
         
         let playButton = SKSpriteNode(imageNamed: "play")
         playButton.position = CGPoint(x: 0, y: -200)
