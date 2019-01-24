@@ -15,7 +15,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     private var yourScoreLabel : SKLabelNode?
     private var finalScoreLabel : SKLabelNode?
     private var playerA : SKSpriteNode?
-    private var ground : SKSpriteNode?
     private var ceil : SKSpriteNode?
     
     private var heartTimer : Timer?
@@ -47,21 +46,43 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         var playerRun : [SKTexture] = []
         for num in 0...14 {
-            print("running_\(num)")
             playerRun.append(SKTexture(imageNamed: "running_\(num)"))
         }
         playerA?.run(SKAction.repeatForever(SKAction.animate(with: playerRun, timePerFrame: 0.05)))
-        
-        ground = childNode(withName: "ground") as? SKSpriteNode
-        ground?.physicsBody?.categoryBitMask = groundAndCeilCategory
-        ground?.physicsBody?.collisionBitMask = playerCategory
         
         ceil = childNode(withName: "ceil") as? SKSpriteNode
         ceil?.physicsBody?.categoryBitMask = groundAndCeilCategory
         
         startTimers()
+        createGrass()
         
         
+    }
+    
+    func createGrass(){
+        let sizingGrass = SKSpriteNode(imageNamed: "grass")
+        let numberOfGrass = Int(size.width / sizingGrass.size.width) + 1
+        for number in 0...numberOfGrass{
+            let grass = SKSpriteNode(imageNamed: "grass")
+            grass.physicsBody = SKPhysicsBody(rectangleOf: grass.size)
+            grass.physicsBody?.categoryBitMask = groundAndCeilCategory
+            grass.physicsBody?.collisionBitMask = playerCategory
+            grass.physicsBody?.affectedByGravity = false
+            grass.physicsBody?.isDynamic = false
+            addChild(grass)
+            
+            let grassX = -size.width/2 + grass.size.width/2 + grass.size.width * CGFloat(number)
+            grass.position = CGPoint(x: grassX, y: -size.height/2 + grass.size.height/2 - 20 )
+            
+            let speed = 100.0
+            let firstMoveLeft = SKAction.moveBy(x: -grass.size.width - grass.size.width * CGFloat(number), y: 0, duration: TimeInterval(grass.size.width + grass.size.width * CGFloat(number)) / speed)
+            
+            let resetGrass = SKAction.moveBy(x: size.width + grass.size.width, y: 0, duration: 0)
+            let grassFullMove = SKAction.moveBy(x: -size.width - grass.size.width, y: 0, duration: TimeInterval(size.width + grass.size.width) / speed)
+            let grassMovingForver = SKAction.repeatForever(SKAction.sequence([grassFullMove,resetGrass]))
+            
+            grass.run(SKAction.sequence([firstMoveLeft,resetGrass,grassMovingForver]))
+        }
     }
     
     func startTimers(){
@@ -117,7 +138,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         addChild(heart)
         
         let maxY = size.width/2 - heart.size.width/2
-        let minY = -size.width/2 + heart.size.width/2
+        let minY = -size.height/2 + heart.size.height/2
         let range = maxY - minY
         let rand = arc4random_uniform(UInt32(range))
         let coinY = maxY - CGFloat(rand)
@@ -142,7 +163,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         addChild(brokenHeart)
         
         let maxY = size.width/2 - brokenHeart.size.width/2
-        let minY = -size.width/2 + brokenHeart.size.width/2
+        let minY = -size.height/2 + brokenHeart.size.height/2
         let range = maxY - minY
         let rand = arc4random_uniform(UInt32(range))
         let brokenHeartY = maxY - CGFloat(rand)
